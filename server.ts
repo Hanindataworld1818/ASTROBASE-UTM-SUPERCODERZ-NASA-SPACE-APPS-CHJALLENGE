@@ -1,9 +1,5 @@
-import 'dotenv/config';
+import type { Server } from 'http';
 import express from 'express';
-import http from 'http';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { createServer as createViteServer } from 'vite';
 import { WebSocketServer } from 'ws';
 import {
   GoogleGenAI,
@@ -12,9 +8,6 @@ import {
   ThinkingLevel,
   Type,
 } from '@google/genai';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 function getGenAIClient(): GoogleGenAI | null {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -62,7 +55,7 @@ function createAiRateLimiter(maxRequests: number, windowMs: number) {
 
 const aiRequestLimit = createAiRateLimiter(10, 60 * 1000);
 
-function attachLiveTranscription(server: http.Server) {
+export function attachLiveTranscription(server: Server) {
 // 1. Live Real-Time Audio Transcription WebSocket via `gemini-3.5-transcribe-live`
 const wss = new WebSocketServer({ noServer: true });
 
@@ -1206,23 +1199,5 @@ export function createApiApp() {
   return app;
 }
 
-export async function startServer() {
-  const app = createApiApp();
-  const server = http.createServer(app);
-  attachLiveTranscription(server);
 
-  if (process.env.NODE_ENV !== 'production') {
-    const vite = await createViteServer({ server: { middlewareMode: true }, appType: 'spa' });
-    app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(__dirname, 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (_req, res) => res.sendFile(path.join(distPath, 'index.html')));
-  }
-
-  const port = Number(process.env.PORT) || 3000;
-  server.listen(port, '0.0.0.0', () => {
-    console.log('AstroBase Junior Astronaut Mission Trainer running on port ' + port);
-  });
-}
 
